@@ -14,91 +14,84 @@ import model.Cliente;
 
 public class PersistenceEmArquivo implements Serializable {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
-
 	private List<Cliente> cadastroClientes = new ArrayList<>();
-
 	private static PersistenceEmArquivo instance;
 
 	private PersistenceEmArquivo() {
 		carregarDadosDeArquivo();
 	}
 
+	// Singleton para garantir uma única instância
 	public static PersistenceEmArquivo getInstance() {
-		if (instance != null)
-			return instance;
-		else
-			return new PersistenceEmArquivo();
+		if (instance == null) {
+			instance = new PersistenceEmArquivo();
+		}
+		return instance;
 	}
 
-	public void salvarCliente(Cliente c) {
-		if (!cadastroClientes.contains(c)) {
-			cadastroClientes.add(c);
+	// Salvar cliente na lista
+	public void salvarCliente(Cliente cliente) {
+		if (!cadastroClientes.contains(cliente)) {
+			cadastroClientes.add(cliente);
 			salvarDadosEmArquivo();
-			System.out.println("Cliente cadastrados com sucesso!");
-		} else
-			System.err.println("Cliente ja cadastrado no sistema!");
-
+			System.out.println("Cliente cadastrado com sucesso!");
+		} else {
+			System.err.println("Cliente já cadastrado no sistema!");
+		}
 	}
 
+	// Localizar cliente por CPF
 	public Cliente localizarClientePorCPF(String cpf) {
-		Cliente c = new Cliente(cpf);
-		c.setCpf(cpf);
-		if (cadastroClientes.contains(c)) {
-			int index = cadastroClientes.indexOf(c);
-			c = cadastroClientes.get(index);
-			return c;
-		} else
-			return null;
+		return cadastroClientes.stream().filter(cliente -> cliente.getCpf().equals(cpf)).findFirst().orElse(null); // Retorna
+																													// null
+																													// caso
+																													// o
+																													// cliente
+																													// não
+																													// seja
+																													// encontrado
 	}
 
-	public void atualizarClienteCadastro(Cliente c) {
-		if (cadastroClientes.contains(c)) {
-			int index = cadastroClientes.indexOf(c);
-			cadastroClientes.set(index, c);
+	// Atualizar dados de um cliente
+	public void atualizarClienteCadastro(Cliente cliente) {
+		int index = encontrarClienteIndex(cliente);
+		if (index != -1) {
+			cadastroClientes.set(index, cliente);
 			salvarDadosEmArquivo();
-		} else
+		} else {
 			System.err.println("Cliente não encontrado!");
+		}
 	}
 
-	public void salvarDadosEmArquivo() {
-		try {
-			FileOutputStream fos = new FileOutputStream("dados");
-			ObjectOutputStream oos = new ObjectOutputStream(fos);
+	// Salvar lista de clientes em arquivo
+	private void salvarDadosEmArquivo() {
+		try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("dados"))) {
 			oos.writeObject(cadastroClientes);
-			oos.close();
-			fos.close();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Dados salvos com sucesso!");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Erro ao salvar os dados: " + e.getMessage());
 		}
 	}
 
+	// Carregar lista de clientes do arquivo
 	private void carregarDadosDeArquivo() {
-
-		try {
-			FileInputStream fis = new FileInputStream("dados");
-			ObjectInputStream ois = new ObjectInputStream(fis);
+		try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("dados"))) {
 			cadastroClientes = (ArrayList<Cliente>) ois.readObject();
-			ois.close();
-			fis.close();
-
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("Nenhum dado encontrado, criando novo arquivo.");
+		} catch (IOException | ClassNotFoundException e) {
+			System.err.println("Erro ao carregar os dados: " + e.getMessage());
 		}
 	}
 
+	// Encontrar índice do cliente para atualização
+	private int encontrarClienteIndex(Cliente cliente) {
+		for (int i = 0; i < cadastroClientes.size(); i++) {
+			if (cadastroClientes.get(i).equals(cliente)) {
+				return i;
+			}
+		}
+		return -1; // Retorna -1 se não encontrar o cliente
+	}
 }
