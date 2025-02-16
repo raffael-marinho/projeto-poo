@@ -22,7 +22,9 @@ public class Transacao {
 
 		this.dataHora = LocalDateTime.now();
 		this.tipo = tipo;
-		this.valor = valor.setScale(2, RoundingMode.HALF_UP); // Usando RoundingMode
+		this.valor = valor.setScale(2, RoundingMode.HALF_UP); // Usando RoundingMode arredondamento utilizada quando
+																// você deseja controlar como os números são
+																// arredondados.
 		this.descricao = descricao;
 	}
 
