@@ -2,18 +2,14 @@ package model;
 
 import java.math.BigDecimal;
 
-public class IConta {
-	float TAXA_ADMINISTRATIVA = 0.02f;
+public interface IConta {
 
-	boolean isStatus();
+    public static final float TAXA_ADMINISTRATIVA = 0.02f;
 
-	BigDecimal getSaldo();
-
-	void setSaldo(BigDecimal novoSaldo);
-
-	void realizarSaque(BigDecimal quantia);
-
-	void realizarDeposito(BigDecimal quantia);
-
-	void realizarTransferencia(IConta destino, BigDecimal quantia);
-}
+    public boolean isStatus();
+    public BigDecimal getSaldo();
+    public void setSaldo(BigDecimal novoSaldo);
+    public void realizarSaque(BigDecimal quantia);
+    public void realizarDeposito(BigDecimal quantia);
+    public void realizarTransferencia(IConta destino, BigDecimal quantia);
+}	

@@ -60,15 +60,13 @@ public class Cliente implements Serializable {
 		}
 	}
 
-	public IConta localizarContaNumero(String numero) {
+	public IConta localizarContaNumero(String numero) throws ContaNaoEncontradaException {
 		for (IConta conta : contas) {
 			if (conta.getNumero().equals(numero)) {
-				System.out.println("Conta encontrada!");
 				return conta;
 			}
 		}
-		System.out.println("Conta não encontrada.");
-		return null;
+		throw new ContaNaoEncontradaException("Conta não encontrada.");
 	}
 
 	public double balancoEntreContas() {
