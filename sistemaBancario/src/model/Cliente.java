@@ -12,7 +12,7 @@ public class Cliente implements Serializable {
 	private String nome;
 	private List<IConta> contas;
 
-	public Cliente(String cpf, String nome) {
+	public Cliente(String cpf) {
 		this.cpf = cpf;
 		this.nome = nome;
 		this.contas = new ArrayList<>();
