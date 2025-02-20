@@ -1,228 +1,323 @@
 package aplicativo;
 
 import java.math.BigDecimal;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
-import exception.ClienteException;
-import exception.ContaException;
+import exception.ContaInativaException;
+import exception.SaldoInsuficienteException;
+import exception.ValorInvalidoException;
 import model.Cliente;
+import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
-import persistence.PersistenceEmArquivo;
+import model.Transacao;
+import persistence.Persistencia;
 
 public class Programa {
-	private static Scanner scanner = new Scanner(System.in);
-	private static PersistenceEmArquivo persistence = PersistenceEmArquivo.getInstance();
 
-	public static void main(String[] args) throws ClienteException {
-		while (true) {
-			exibirMenu();
-			int opcao = scanner.nextInt();
-			scanner.nextLine(); // Limpar o buffer de linha
+	public static void main(String[] args) {
+		Persistencia p = new Persistencia();
+		Scanner sc = new Scanner(System.in);
 
-			switch (opcao) {
-			case 1:
-				cadastrarCliente(); // Aqui a exceção é propagada
-				break;
-			case 2:
-				acessarConta();
-				break;
-			case 3:
-				System.out.println("Saindo...");
-				return;
-			default:
-				System.out.println("Opção inválida. Tente novamente.");
+		try {
+			boolean sair = false;
+			while (!sair) {
+				System.out.println("\n\nBem-vindo ao sistema bancário!");
+				System.out.println("Escolha uma opção:");
+				System.out.println("1 - Cadastrar cliente");
+				System.out.println("2 - Listar clientes");
+				System.out.println("3 - Consultar cliente por CPF");
+				System.out.println("4 - Menu do cliente");
+				System.out.println("5 - Remover cliente");
+				System.out.println("6 - Sair");
+
+				try {
+					int opcao = sc.nextInt();
+					sc.nextLine(); // Limpar o buffer do scanner
+
+					switch (opcao) {
+					case 1:
+						cadastrarCliente(p, sc);
+						break;
+					case 2:
+						listarClientes(p);
+						break;
+					case 3:
+						consultarClientePorCpf(p, sc);
+						break;
+					case 4:
+						menuCliente(p, sc);
+						break;
+					case 5:
+						removerCliente(p, sc);
+						break;
+					case 6:
+						sair = true;
+						System.out.println("Saindo...");
+						break;
+					default:
+						System.out.println("Opção inválida!");
+					}
+				} catch (InputMismatchException e) {
+					System.out.println("Entrada inválida. Digite um número.");
+					sc.nextLine(); // Limpar o buffer do scanner
+				}
+			}
+		} finally {
+			// Salva os dados antes de encerrar o programa
+			p.salvarClientes();
+			sc.close();
+		}
+	}
+
+	private static void cadastrarCliente(Persistencia p, Scanner sc) {
+		System.out.print("Digite o CPF do cliente: ");
+		String cpf = sc.nextLine();
+		System.out.print("Digite o nome do cliente: ");
+		String nome = sc.nextLine();
+
+		Cliente cliente = new Cliente(cpf, nome);
+		p.adicionarCliente(cliente);
+		System.out.println("Cliente cadastrado com sucesso!");
+	}
+
+	private static void listarClientes(Persistencia p) {
+		System.out.println("Lista de clientes:");
+		for (Cliente cliente : p.getClientes()) {
+			System.out.println(cliente);
+		}
+	}
+
+	private static void consultarClientePorCpf(Persistencia p, Scanner sc) {
+		System.out.print("Digite o CPF do cliente: ");
+		String cpf = sc.nextLine();
+
+		Cliente cliente = p.localizarClientePorCpf(cpf);
+		if (cliente != null) {
+			System.out.println("Cliente encontrado:");
+			System.out.println(cliente);
+		} else {
+			System.out.println("Cliente não encontrado.");
+		}
+	}
+
+	private static void removerCliente(Persistencia p, Scanner sc) {
+		System.out.print("Digite o CPF do cliente a ser removido: ");
+		String cpf = sc.nextLine();
+
+		Cliente cliente = p.localizarClientePorCpf(cpf);
+		if (cliente != null) {
+			p.removerCliente(cliente);
+			System.out.println("Cliente removido com sucesso!");
+		} else {
+			System.out.println("Cliente não encontrado.");
+		}
+	}
+
+	private static void menuCliente(Persistencia p, Scanner sc) {
+		System.out.print("Digite o CPF do cliente: ");
+		String cpf = sc.nextLine();
+		Cliente cliente = p.localizarClientePorCpf(cpf);
+
+		if (cliente == null) {
+			System.out.println("Cliente não encontrado.");
+			return;
+		}
+
+		boolean voltar = false;
+		while (!voltar) {
+			System.out.println("\n\nMenu do cliente:");
+			System.out.println("1 - Criar conta corrente");
+			System.out.println("2 - Criar conta poupança");
+			System.out.println("3 - Realizar depósito");
+			System.out.println("4 - Realizar saque");
+			System.out.println("5 - Transferir para outra conta");
+			System.out.println("6 - Consultar saldo");
+			System.out.println("7 - Listar transações");
+			System.out.println("8 - Aplicar rendimento (Poupança)");
+			System.out.println("9 - Consultar balanço");
+			System.out.println("10 - Voltar");
+
+			try {
+				int opcao = sc.nextInt();
+				sc.nextLine(); // Limpar o buffer do scanner
+
+				switch (opcao) {
+				case 1:
+					criarContaCorrente(cliente);
+					break;
+				case 2:
+					criarContaPoupanca(cliente);
+					break;
+				case 3:
+					realizarDeposito(cliente, sc);
+					break;
+				case 4:
+					realizarSaque(cliente, sc);
+					break;
+				case 5:
+					transferirEntreContas(cliente, sc);
+					break;
+				case 6:
+					consultarSaldo(cliente, sc);
+					break;
+				case 7:
+					listarTransacoes(cliente, sc);
+					break;
+				case 8:
+					aplicarRendimento(cliente, sc);
+					break;
+				case 9:
+					consultarBalanco(cliente);
+					break;
+				case 10:
+					voltar = true;
+					break;
+				default:
+					System.out.println("Opção inválida!");
+				}
+			} catch (InputMismatchException e) {
+				System.out.println("Entrada inválida. Digite um número.");
+				sc.nextLine(); // Limpar o buffer do scanner
 			}
 		}
 	}
 
-	private static void exibirMenu() {
-		System.out.println("\n--- Sistema Bancário ---");
-		System.out.println("1 - Cadastrar Cliente");
-		System.out.println("2 - Acessar Conta");
-		System.out.println("3 - Sair");
-		System.out.print("Escolha uma opção: ");
+	private static void criarContaCorrente(Cliente cliente) {
+		Conta novaConta = new ContaCorrente(cliente.getContas().size() + 1);
+		cliente.adicionarConta(novaConta);
+		System.out.println("Conta corrente criada com sucesso!");
 	}
 
-	private static void cadastrarCliente() throws ClienteException {
-		System.out.print("Digite o CPF do cliente: ");
-		String cpf = scanner.nextLine();
-
-		if (persistence.localizarClientePorCPF(cpf) != null) {
-			System.out.println("Cliente já cadastrado!");
-			return;
-		}
-
-		System.out.print("Digite o nome do cliente: ");
-		String nome = scanner.nextLine();
-
-		Cliente cliente = new Cliente(nome, cpf);
-		persistence.salvarCliente(cliente);
-
-		System.out.println("Cliente cadastrado com sucesso!");
+	private static void criarContaPoupanca(Cliente cliente) {
+		Conta novaConta = new ContaPoupanca(cliente.getContas().size() + 1);
+		cliente.adicionarConta(novaConta);
+		System.out.println("Conta poupança criada com sucesso!");
 	}
 
-	private static void acessarConta() throws ClienteException {
-		System.out.print("Digite o CPF do cliente: ");
-		String cpf = scanner.nextLine();
-
-		Cliente cliente = persistence.localizarClientePorCPF(cpf);
-		if (cliente == null) {
-			System.out.println("Cliente não encontrado!");
-			return;
-		}
-
-		System.out.println("Conta do cliente: " + cliente.getNome());
-		exibirMenuContas(cliente);
-	}
-
-	private static void exibirMenuContas(Cliente cliente) throws ClienteException {
-		System.out.println("\n1 - Criar Conta Corrente");
-		System.out.println("2 - Criar Conta Poupança");
-		System.out.println("3 - Consultar Saldo");
-		System.out.println("4 - Depositar");
-		System.out.println("5 - Sacar");
-		System.out.println("6 - Transferir");
-		System.out.println("7 - Voltar");
-		System.out.print("Escolha uma opção: ");
-
-		int opcao = scanner.nextInt();
-		scanner.nextLine(); // Limpar o buffer de linha
-
-		switch (opcao) {
-		case 1:
-			criarContaCorrente(cliente);
-			break;
-		case 2:
-			criarContaPoupanca(cliente);
-			break;
-		case 3:
-			consultarSaldo(cliente);
-			break;
-		case 4:
-			depositar(cliente);
-			break;
-		case 5:
-			sacar(cliente);
-			break;
-		case 6:
-			transferir(cliente);
-			break;
-		case 7:
-			return;
-		default:
-			System.out.println("Opção inválida. Tente novamente.");
-		}
-	}
-
-	private static void criarContaCorrente(Cliente cliente) throws ClienteException {
-		System.out.print("Digite o número da Conta Corrente: ");
-		String numero = scanner.nextLine();
-
-		ContaCorrente contaCorrente = new ContaCorrente(numero);
-		try {
-			cliente.adicionarConta(contaCorrente);
-		} catch (ClienteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		System.out.println("Conta Corrente criada com sucesso!");
-	}
-
-	private static void criarContaPoupanca(Cliente cliente) throws ClienteException {
-		System.out.print("Digite o número da Conta Poupança: ");
-		String numero = scanner.nextLine();
-
-		ContaPoupanca contaPoupanca = new ContaPoupanca(numero);
-		try {
-			cliente.adicionarConta(contaPoupanca);
-		} catch (ClienteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		System.out.println("Conta Poupança criada com sucesso!");
-	}
-
-	private static void consultarSaldo(Cliente cliente) {
+	private static void realizarDeposito(Cliente cliente, Scanner sc) {
 		System.out.print("Digite o número da conta: ");
-		String numeroConta = scanner.nextLine();
+		int numeroConta = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
 
-		cliente.getContas().stream().filter(conta -> conta.getNumero().equals(numeroConta)).findFirst().ifPresentOrElse(
-				conta -> System.out.println("Saldo da conta " + conta.getNumero() + ": R$" + conta.getSaldo()),
-				() -> System.out.println("Conta não encontrada!"));
+		Conta conta = cliente.localizarContaPorNumero(numeroConta);
+		if (conta != null) {
+			System.out.print("Digite o valor do depósito: ");
+			BigDecimal valor = sc.nextBigDecimal();
+			sc.nextLine(); // Limpar o buffer do scanner
+
+			try {
+				conta.depositar(valor);
+				System.out.println("Depósito realizado com sucesso!");
+			} catch (ValorInvalidoException | ContaInativaException e) {
+				System.out.println("Erro: " + e.getMessage());
+			}
+		} else {
+			System.out.println("Conta não encontrada.");
+		}
 	}
 
-	private static void depositar(Cliente cliente) {
+	private static void realizarSaque(Cliente cliente, Scanner sc) {
 		System.out.print("Digite o número da conta: ");
-		String numeroConta = scanner.nextLine();
+		int numeroConta = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
 
-		System.out.print("Digite o valor do depósito: ");
-		BigDecimal valor = scanner.nextBigDecimal();
-		scanner.nextLine(); // Limpar o buffer de linha
+		Conta conta = cliente.localizarContaPorNumero(numeroConta);
+		if (conta != null) {
+			System.out.print("Digite o valor do saque: ");
+			BigDecimal valor = sc.nextBigDecimal();
+			sc.nextLine(); // Limpar o buffer do scanner
 
-		cliente.getContas().stream().filter(conta -> conta.getNumero().equals(numeroConta)).findFirst()
-				.ifPresentOrElse(conta -> {
-					try {
-						conta.realizarDeposito(valor);
-					} catch (ContaException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					System.out.println("Depósito realizado com sucesso!");
-				}, () -> System.out.println("Conta não encontrada!"));
+			try {
+				conta.sacar(valor);
+				System.out.println("Saque realizado com sucesso!");
+			} catch (SaldoInsuficienteException | ValorInvalidoException | ContaInativaException e) {
+				System.out.println("Erro: " + e.getMessage());
+			}
+		} else {
+			System.out.println("Conta não encontrada.");
+		}
 	}
 
-	private static void sacar(Cliente cliente) {
+	private static void transferirEntreContas(Cliente cliente, Scanner sc) {
+		System.out.print("Digite o número da conta de origem: ");
+		int numeroContaOrigem = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
+
+		System.out.print("Digite o número da conta de destino: ");
+		int numeroContaDestino = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
+
+		Conta contaOrigem = cliente.localizarContaPorNumero(numeroContaOrigem);
+		Conta contaDestino = cliente.localizarContaPorNumero(numeroContaDestino);
+
+		if (contaOrigem != null && contaDestino != null) {
+			System.out.print("Digite o valor da transferência: ");
+			BigDecimal valor = sc.nextBigDecimal();
+			sc.nextLine(); // Limpar o buffer do scanner
+
+			try {
+				contaOrigem.transferir(contaDestino, valor);
+				System.out.println("Transferência realizada com sucesso!");
+			} catch (SaldoInsuficienteException | ValorInvalidoException | ContaInativaException e) {
+				System.out.println("Erro: " + e.getMessage());
+			}
+		} else {
+			System.out.println("Conta(s) não encontrada(s).");
+		}
+	}
+
+	private static void consultarSaldo(Cliente cliente, Scanner sc) {
 		System.out.print("Digite o número da conta: ");
-		String numeroConta = scanner.nextLine();
+		int numeroConta = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
 
-		System.out.print("Digite o valor do saque: ");
-		BigDecimal valor = scanner.nextBigDecimal();
-		scanner.nextLine(); // Limpar o buffer de linha
-
-		cliente.getContas().stream().filter(conta -> conta.getNumero().equals(numeroConta)).findFirst()
-				.ifPresentOrElse(conta -> {
-					try {
-						if (conta.realizarSaque(valor)) {
-							System.out.println("Saque realizado com sucesso!");
-						} else {
-							System.out.println("Saldo insuficiente!");
-						}
-					} catch (ContaException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}, () -> System.out.println("Conta não encontrada!"));
+		Conta conta = cliente.localizarContaPorNumero(numeroConta);
+		if (conta != null) {
+			System.out.println("Saldo da conta: " + conta.getSaldo());
+		} else {
+			System.out.println("Conta não encontrada.");
+		}
 	}
 
-	private static void transferir(Cliente cliente) {
-		System.out.print("Digite o número da conta origem: ");
-		String numeroContaOrigem = scanner.nextLine();
+	private static void listarTransacoes(Cliente cliente, Scanner sc) {
+		System.out.print("Digite o número da conta: ");
+		int numeroConta = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
 
-		System.out.print("Digite o número da conta destino: ");
-		String numeroContaDestino = scanner.nextLine();
+		Conta conta = cliente.localizarContaPorNumero(numeroConta);
+		if (conta != null) {
+			System.out.println("Transações da conta:");
+			for (Transacao transacao : conta.getTransacoes()) {
+				System.out.println(transacao);
+			}
+		} else {
+			System.out.println("Conta não encontrada.");
+		}
+	}
 
-		System.out.print("Digite o valor da transferência: ");
-		BigDecimal valor = scanner.nextBigDecimal();
-		scanner.nextLine(); // Limpar o buffer de linha
+	private static void aplicarRendimento(Cliente cliente, Scanner sc) {
+		System.out.print("Digite o número da conta poupança: ");
+		int numeroConta = sc.nextInt();
+		sc.nextLine(); // Limpar o buffer do scanner
 
-		cliente.getContas().stream().filter(conta -> conta.getNumero().equals(numeroContaOrigem)).findFirst()
-				.ifPresentOrElse(contaOrigem -> {
-					cliente.getContas().stream().filter(conta -> conta.getNumero().equals(numeroContaDestino))
-							.findFirst().ifPresentOrElse(contaDestino -> {
-								try {
-									if (contaOrigem.realizarTransferencia(contaDestino, valor)) {
-										System.out.println("Transferência realizada com sucesso!");
-									} else {
-										System.out.println("Erro na transferência.");
-									}
-								} catch (ContaException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							}, () -> System.out.println("Conta destino não encontrada!"));
-				}, () -> System.out.println("Conta origem não encontrada!"));
+		Conta conta = cliente.localizarContaPorNumero(numeroConta);
+		if (conta instanceof ContaPoupanca) {
+			((ContaPoupanca) conta).aplicarRendimento();
+			System.out.println("Rendimento aplicado com sucesso!");
+		} else {
+			System.out.println("A conta não é uma conta poupança.");
+		}
+	}
+
+	private static void consultarBalanco(Cliente cliente) {
+		BigDecimal balancoTotal = BigDecimal.ZERO;
+		System.out.println("Balanço de todas as contas do cliente:");
+		for (Conta conta : cliente.getContas()) {
+			System.out.println("Conta " + conta.getNumeroDaConta() + ": Saldo = " + conta.getSaldo());
+			balancoTotal = balancoTotal.add(conta.getSaldo());
+		}
+		System.out.println("Balanço total: " + balancoTotal);
 	}
 }

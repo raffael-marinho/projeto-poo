@@ -1,25 +1,89 @@
 package model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Objects;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-import exception.ContaException;
+import exception.ContaInativaException;
+import exception.SaldoInsuficienteException;
+import exception.ValorInvalidoException;
 
-public abstract class Conta implements IConta {
+public abstract class Conta implements IConta, Serializable {
+	private static final long serialVersionUID = 1L;
 
-	protected String numero;
-	protected BigDecimal saldo;
-	protected boolean status;
+	private Integer numeroDaConta;
+	private BigDecimal saldo;
+	private LocalDateTime dataAbertura;
+	private boolean status;
+	private List<Transacao> transacoes;
 
-	public Conta(String numero) {
-		this.numero = numero;
-		this.saldo = BigDecimal.ZERO.setScale(2); // Inicializa o saldo com 2 casas decimais
+	public Conta(Integer numero) {
+		this.numeroDaConta = numero;
+		this.saldo = BigDecimal.ZERO;
+		this.dataAbertura = LocalDateTime.now();
 		this.status = true;
+		this.transacoes = new ArrayList<>();
 	}
 
 	@Override
-	public String getNumero() {
-		return numero;
+	public void depositar(BigDecimal quantia) throws ValorInvalidoException, ContaInativaException {
+		if (!status) {
+			throw new ContaInativaException("Conta inativa. Operação não permitida.");
+		}
+		if (quantia.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new ValorInvalidoException("Valor inválido para depósito.");
+		}
+		this.saldo = this.saldo.add(quantia);
+		transacoes.add(new Transacao(TipoTransacao.CREDITO, quantia));
+		System.out.println("Depósito realizado com sucesso.");
+	}
+
+	@Override
+	public void sacar(BigDecimal quantia)
+			throws SaldoInsuficienteException, ValorInvalidoException, ContaInativaException {
+		if (!status) {
+			throw new ContaInativaException("Conta inativa. Operação não permitida.");
+		}
+		if (quantia.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new ValorInvalidoException("Valor inválido para saque.");
+		}
+		if (this.saldo.compareTo(quantia) < 0) {
+			throw new SaldoInsuficienteException("Saldo insuficiente para realizar o saque.");
+		}
+		this.saldo = this.saldo.subtract(quantia);
+		transacoes.add(new Transacao(TipoTransacao.DEBITO, quantia));
+		System.out.println("Saque realizado com sucesso.");
+	}
+
+	@Override
+	public void transferir(IConta outraConta, BigDecimal quantia)
+			throws SaldoInsuficienteException, ValorInvalidoException, ContaInativaException {
+		if (!status || !outraConta.isStatus()) {
+			throw new ContaInativaException("Uma das contas está inativa. Operação não permitida.");
+		}
+		if (quantia.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new ValorInvalidoException("Valor inválido para transferência.");
+		}
+		if (this.saldo.compareTo(quantia) < 0) {
+			throw new SaldoInsuficienteException("Saldo insuficiente para realizar a transferência.");
+		}
+
+		// Cobrança de tarifa para transferências entre contas diferentes
+		BigDecimal taxa = BigDecimal.ZERO;
+		if (!this.getClass().equals(outraConta.getClass())) {
+			taxa = quantia.multiply(new BigDecimal("0.01")); // 1% de taxa
+			this.saldo = this.saldo.subtract(quantia.add(taxa));
+			transacoes.add(new Transacao(TipoTransacao.DEBITO, quantia.add(taxa)));
+			System.out.println("Taxa de transferência: " + taxa);
+		} else {
+			this.saldo = this.saldo.subtract(quantia);
+			transacoes.add(new Transacao(TipoTransacao.DEBITO, quantia));
+		}
+
+		outraConta.depositar(quantia);
+		System.out.println("Transferência realizada com sucesso.");
 	}
 
 	@Override
@@ -28,8 +92,8 @@ public abstract class Conta implements IConta {
 	}
 
 	@Override
-	public void setSaldo(BigDecimal saldo) {
-		this.saldo = saldo.setScale(2); // Garante que o saldo tenha 2 casas decimais
+	public int getNumeroDaConta() {
+		return numeroDaConta;
 	}
 
 	@Override
@@ -37,58 +101,13 @@ public abstract class Conta implements IConta {
 		return status;
 	}
 
-	@Override
-	public void setStatus(boolean status) {
-		this.status = status;
+	public List<Transacao> getTransacoes() {
+		return transacoes;
 	}
 
 	@Override
-	public boolean realizarSaque(BigDecimal quantia) throws ContaException { // Lançando a exceção aqui
-		if (isStatus() && quantia.compareTo(BigDecimal.ZERO) > 0 && quantia.compareTo(saldo) <= 0) {
-			saldo = saldo.subtract(quantia);
-			return true;
-		}
-		throw new ContaException("Saque não realizado. Verifique o saldo ou o status da conta.");
-	}
-
-	@Override
-	public boolean realizarDeposito(BigDecimal quantia) throws ContaException {
-		if (isStatus() && quantia.compareTo(BigDecimal.ZERO) > 0) {
-			saldo = saldo.add(quantia);
-			return true;
-		}
-		throw new ContaException("Depósito não realizado. Verifique o status da conta.");
-	}
-
-	@Override
-	public boolean realizarTransferencia(IConta destino, BigDecimal quantia) throws ContaException {
-		if (isStatus() && destino.isStatus() && quantia.compareTo(BigDecimal.ZERO) > 0) {
-			BigDecimal valorComTarifa = aplicarTarifa(quantia);
-
-			if (quantia.compareTo(saldo) <= 0) {
-				saldo = saldo.subtract(valorComTarifa);
-				destino.setSaldo(destino.getSaldo().add(quantia));
-				return true;
-			}
-		}
-		throw new ContaException("Transferência não realizada. Verifique o saldo ou o status das contas.");
-	}
-
-	@Override
-	public abstract BigDecimal aplicarTarifa(BigDecimal valor);
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(numero);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null || getClass() != obj.getClass())
-			return false;
-		Conta other = (Conta) obj;
-		return Objects.equals(numero, other.numero);
+	public String toString() {
+		return "Conta [numeroDaConta=" + numeroDaConta + ", saldo=" + saldo + ", dataAbertura=" + dataAbertura
+				+ ", status=" + status + "]";
 	}
 }

@@ -2,31 +2,21 @@ package model;
 
 import java.math.BigDecimal;
 
-import exception.ContaException;
+import exception.ContaInativaException;
+import exception.SaldoInsuficienteException;
+import exception.ValorInvalidoException;
 
 public interface IConta {
+	void depositar(BigDecimal quantia) throws ValorInvalidoException, ContaInativaException;
 
-	// Constantes de taxas
-	float TAXA_ADMINISTRATIVA = 0.02f;
+	void sacar(BigDecimal quantia) throws SaldoInsuficienteException, ValorInvalidoException, ContaInativaException;
 
-	// Métodos essenciais
-	boolean isStatus();
+	void transferir(IConta outraConta, BigDecimal quantia)
+			throws SaldoInsuficienteException, ValorInvalidoException, ContaInativaException;
 
 	BigDecimal getSaldo();
 
-	void setSaldo(BigDecimal saldo);
+	int getNumeroDaConta();
 
-	boolean realizarSaque(BigDecimal quantia) throws ContaException;
-
-	boolean realizarDeposito(BigDecimal quantia) throws ContaException;
-
-	boolean realizarTransferencia(IConta destino, BigDecimal quantia) throws ContaException;
-
-	// Método para aplicar tarifa, será implementado de forma diferente em cada tipo
-	// de conta
-	BigDecimal aplicarTarifa(BigDecimal valor);
-
-	void setStatus(boolean status);
-
-	String getNumero();
+	boolean isStatus();
 }

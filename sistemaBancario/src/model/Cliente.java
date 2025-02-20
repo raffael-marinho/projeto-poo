@@ -3,41 +3,45 @@ package model;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-
-import exception.ClienteException;
 
 public class Cliente implements Serializable {
+	private static final long serialVersionUID = 1L;
 
-	private String nome;
 	private String cpf;
+	private String nome;
 	private List<Conta> contas;
 
-	public Cliente(String nome, String cpf) throws ClienteException {
-		if (!validarCpf(cpf)) {
-			throw new ClienteException("CPF inválido!");
-		}
-		this.nome = nome;
+	public Cliente(String cpf, String nome) {
 		this.cpf = cpf;
+		this.nome = nome;
 		this.contas = new ArrayList<>();
 	}
 
-	public void adicionarConta(Conta conta) throws ClienteException {
-		if (conta == null) {
-			throw new ClienteException("Conta não pode ser nula!");
+	public void adicionarConta(Conta conta) {
+		if (!contas.contains(conta)) {
+			contas.add(conta);
+			System.out.println("Conta adicionada com sucesso.");
+		} else {
+			System.out.println("Conta já existe para este cliente.");
 		}
+	}
+
+	public void removerConta(Conta conta) {
 		if (contas.contains(conta)) {
-			throw new ClienteException("Conta já associada ao cliente!");
+			contas.remove(conta);
+			System.out.println("Conta removida com sucesso.");
+		} else {
+			System.out.println("Conta não encontrada para este cliente.");
 		}
-		contas.add(conta);
 	}
 
-	public boolean removerConta(Conta conta) {
-		return contas.remove(conta);
-	}
-
-	public List<Conta> getContas() {
-		return new ArrayList<>(contas); // Retorna uma cópia da lista
+	public Conta localizarContaPorNumero(int numero) {
+		for (Conta conta : contas) {
+			if (conta.getNumeroDaConta() == numero) {
+				return conta;
+			}
+		}
+		return null;
 	}
 
 	public String getCpf() {
@@ -48,30 +52,13 @@ public class Cliente implements Serializable {
 		return nome;
 	}
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(cpf);
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Cliente other = (Cliente) obj;
-		return Objects.equals(cpf, other.cpf);
-	}
-
-	public boolean validarCpf(String cpf) {
-		// Implementação simples de verificação de CPF
-		return cpf != null && cpf.matches("\\d{11}");
+	// Método getContas() adicionado
+	public List<Conta> getContas() {
+		return contas;
 	}
 
 	@Override
 	public String toString() {
-		return "Cliente [nome=" + nome + ", cpf=" + cpf + ", contas=" + contas + "]";
+		return "Cliente [cpf=" + cpf + ", nome=" + nome + ", contas=" + contas + "]";
 	}
 }
